@@ -9,67 +9,11 @@ import {
   Target, 
   User,
   Zap,
-  Star 
+  Star,
+  Loader2
 } from "lucide-react";
-
-interface Activity {
-  id: string;
-  type: "message" | "call" | "meeting" | "opportunity" | "contact" | "workflow" | "review";
-  title: string;
-  description: string;
-  timestamp: string;
-  contact?: {
-    name: string;
-    initials: string;
-  };
-  status?: "success" | "pending" | "failed";
-}
-
-const mockActivities: Activity[] = [
-  {
-    id: "1",
-    type: "message",
-    title: "Email sent to lead",
-    description: "Welcome sequence email delivered to Sarah Johnson",
-    timestamp: "2 minutes ago",
-    contact: { name: "Sarah Johnson", initials: "SJ" },
-    status: "success",
-  },
-  {
-    id: "2",
-    type: "workflow",
-    title: "Automation triggered",
-    description: "Lead nurture workflow started for new form submission",
-    timestamp: "5 minutes ago",
-    status: "success",
-  },
-  {
-    id: "3",
-    type: "meeting",
-    title: "Appointment booked",
-    description: "Mike Chen scheduled a consultation for tomorrow",
-    timestamp: "15 minutes ago",
-    contact: { name: "Mike Chen", initials: "MC" },
-    status: "success",
-  },
-  {
-    id: "4",
-    type: "opportunity",
-    title: "Deal moved to proposal",
-    description: "Marketing services opportunity advanced in pipeline",
-    timestamp: "1 hour ago",
-    status: "success",
-  },
-  {
-    id: "5",
-    type: "review",
-    title: "New 5-star review",
-    description: "Emily Rodriguez left a positive review on Google",
-    timestamp: "2 hours ago",
-    contact: { name: "Emily Rodriguez", initials: "ER" },
-    status: "success",
-  },
-];
+import { useActivityLog } from "@/hooks/use-activity-log";
+import { formatDistanceToNow } from "date-fns";
 
 const activityIcons = {
   message: Mail,
@@ -88,6 +32,21 @@ const statusColors = {
 };
 
 export function RecentActivity() {
+  const { activities, isLoading } = useActivityLog(5);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle>Recent Activity</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -95,49 +54,56 @@ export function RecentActivity() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          {mockActivities.map((activity) => {
-            const Icon = activityIcons[activity.type];
-            
-            return (
-              <div key={activity.id} className="flex items-start space-x-3">
-                <div className={`rounded-full p-2 ${
-                  activity.status === "success" ? "bg-success/10" :
-                  activity.status === "pending" ? "bg-warning/10" :
-                  "bg-destructive/10"
-                }`}>
-                  <Icon className={`h-4 w-4 ${
-                    activity.status ? statusColors[activity.status] : "text-muted-foreground"
-                  }`} />
-                </div>
-                
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-medium">{activity.title}</h4>
-                    <span className="text-xs text-muted-foreground">
-                      {activity.timestamp}
-                    </span>
+          {activities.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No recent activity to display.
+            </div>
+          ) : (
+            activities.map((activity) => {
+              const Icon = activityIcons[activity.type];
+              
+              return (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className={`rounded-full p-2 ${
+                    activity.status === "success" ? "bg-success/10" :
+                    activity.status === "pending" ? "bg-warning/10" :
+                    activity.status === "failed" ? "bg-destructive/10" :
+                    "bg-muted"
+                  }`}>
+                    <Icon className={`h-4 w-4 ${
+                      activity.status ? statusColors[activity.status] : "text-muted-foreground"
+                    }`} />
                   </div>
                   
-                  <p className="text-sm text-muted-foreground">
-                    {activity.description}
-                  </p>
-                  
-                  {activity.contact && (
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback className="text-xs">
-                          {activity.contact.initials}
-                        </AvatarFallback>
-                      </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium">{activity.title}</h4>
                       <span className="text-xs text-muted-foreground">
-                        {activity.contact.name}
+                        {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                       </span>
                     </div>
-                  )}
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {activity.description}
+                    </p>
+                    
+                    {activity.contact_name && activity.contact_initials && (
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs">
+                            {activity.contact_initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground">
+                          {activity.contact_name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </CardContent>
     </Card>
